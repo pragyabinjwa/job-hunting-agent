@@ -1,0 +1,553 @@
+{
+  "name": "Job Hunt",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "fd7aa1c4-0776-468e-bf1b-0749f11db146",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b524e0fb-7647-44ac-ba4d-e6ff2b71c0d3",
+              "name": "Resume's Google Doc ID",
+              "value": "Doc ID here",
+              "type": "string"
+            },
+            {
+              "id": "dd5a71cd-c864-4a41-8c9b-bff2dbb4536d",
+              "name": "Job Search Query",
+              "value": "Job Role here",
+              "type": "string"
+            },
+            {
+              "id": "cb81644c-63a0-4525-89e3-a18273fb1188",
+              "name": "Email address",
+              "value": "email here",
+              "type": "string"
+            },
+            {
+              "id": "4f037ef8-9f4c-4375-aabe-a89abcf7f309",
+              "name": "Apify API Token",
+              "value": "APIFY TOKEN HERE",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        256,
+        0
+      ],
+      "id": "5fc0497b-00a0-4991-addb-0a36c1258314",
+      "name": "Variables"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "file id",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        464,
+        0
+      ],
+      "id": "fc3e5a3f-4290-476c-91dc-252afaa8cf1c",
+      "name": "Google Drive ",
+      "credentials": {
+        "googleApi": {
+          "id": "EYIG1CkH37neOPSB",
+          "name": "Google Drive account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const binaryData = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst text = binaryData.toString('utf8');\nreturn [{ json: { resumeText: text } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        0
+      ],
+      "id": "299337aa-6acc-416c-8238-382a7a760012",
+      "name": "Extract Text from pdf"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e46cf46c-676d-476d-a343-507d155fa314",
+              "name": "linkedinurl",
+              "value": "=https://www.linkedin.com/jobs/search/?keywords={{ $('Variables').item.json.jobSearchQuery }}&f_TPR=r86400",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        864,
+        0
+      ],
+      "id": "3b9d6210-7333-441e-8f64-ce178462e162",
+      "name": "Build LinkedURL"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.apify.com/v2/actor-runs/{{ $('Apify - Fetch Jobs').item.json.data.id }}?token=Apify token here",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -176,
+        336
+      ],
+      "id": "2cdc70e6-017f-4df8-8dee-4d3ea34bb03d",
+      "name": "Chek Apify status"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4c21d1df-00b4-4b04-8ec5-9097d815708c",
+              "leftValue": "={{ $json.data.status }}",
+              "rightValue": "SUCCEEDED",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        32,
+        352
+      ],
+      "id": "42a11cc2-1199-4d10-b070-fcab31cbf847",
+      "name": "If Scraping Done?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/curious_coder~linkedin-jobs-scraper/runs?token=APIFY TOKEN HERE",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"urls\": [\"https://www.linkedin.com/jobs/search/?keywords=Product+Manager+AI+Tech&location=Bangalore&f_TPR=r86400\"],\n  \"maxJobs\": 15\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1072,
+        0
+      ],
+      "id": "c7ae8504-0b3f-4343-a130-f4892fd49b7c",
+      "name": "Apify - Fetch Jobs"
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        448
+      ],
+      "id": "6c369933-c4fa-4c9c-9d56-12cbbf506f0a",
+      "name": "Wait",
+      "webhookId": "bf160300-0533-43ef-a64c-c37e20dbdb1b"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.apify.com/v2/actor-runs/{{ $('Apify - Fetch Jobs').item.json.data.id }}/dataset/items?token=APIFY TOKEN HERE",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        240,
+        256
+      ],
+      "id": "e703e5f4-67ca-46ff-a2f6-8323d19f6857",
+      "name": "Fetch Results"
+    },
+    {
+      "parameters": {
+        "jsCode": "const jobs = $input.all();\n\nreturn jobs.map(job => ({\n  json: {\n    title: job.json.title || 'N/A',\n    company: job.json.companyName || 'N/A',\n    location: job.json.location || 'N/A',\n    jobUrl: job.json.jobUrl || job.json.url || 'N/A',\n    description: job.json.description || job.json.jobDescription || 'N/A',\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        256
+      ],
+      "id": "183c0f8d-b31b-4f50-ae7e-94d561565061",
+      "name": "Parse Results"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().slice(0, 10);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        256
+      ],
+      "id": "41748e1f-1db0-4ced-b0a9-78de9c5d1b87",
+      "name": "Limit to 10 Jobs"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Here is my resume:\n{{ $('Extract Text from pdf').item.json.resumeText }}\n\nHere is the job I am applying for:\nCompany: {{ $json.company }}\nTitle: {{ $json.title }}\nLocation: {{ $json.location }}\nDescription: {{ $json.description }}\n\nPlease rewrite my resume to match this job's ATS keywords without inventing any facts.",
+        "options": {
+          "systemMessage": "You are an expert ATS resume optimizer. \n\nYou will receive a resume and a job description. Your task is to rewrite the resume to match the job's keywords and requirements as closely as possible.\n\nRules:\n- Do NOT invent facts, companies, dates, or metrics\n- Keep all real experience intact\n- Only rewrite phrasing to match ATS keywords\n- Output the full rewritten resume as plain text\n- Make the points sound like Human, no fluff, no complex statement, just simple plain language"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        864,
+        256
+      ],
+      "id": "18811e25-472a-4958-8e6a-adf6ca2dbbcf",
+      "name": "ATS Optimiser Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        736,
+        464
+      ],
+      "id": "2eeddd19-5623-437b-b959-81613cee38c9",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "tHNpMIF3WJ0S1RbG",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "folderId": "default",
+        "title": "=Pragya Binjwa - {{ $('Parse Results').item.json.company }} - {{ $('Parse Results').item.json.title }} - {{ $now.format('dd MMM') }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1296,
+        656
+      ],
+      "id": "4ca030ac-7475-446d-a4be-3276742a1844",
+      "name": "Create a document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "recdW7X1lvXF6pch",
+          "name": "Google Docs account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $('ATS Optimiser Agent').item.json.output }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        928
+      ],
+      "id": "7bec4e0a-54dd-4a4a-90dc-d4d6e762bdd1",
+      "name": "Update a document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "recdW7X1lvXF6pch",
+          "name": "Google Docs account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "pragyabinjwa.aiesec@gmail.com",
+        "subject": "=Your ATS Optimised Resumes - {{ $now.format('dd MMM yyyy') }}",
+        "message": "=<p>Hi Pragya!</p>\n<p>Your AI job agent found jobs for you today — {{ $now.format('dd MMM yyyy') }}</p>\n\n<table border=\"1\" cellpadding=\"8\" cellspacing=\"0\" style=\"border-collapse:collapse; width:100%;\">\n  <tr style=\"background-color:#f2f2f2;\">\n    <th>S.No</th>\n    <th>Company</th>\n    <th>Position</th>\n    <th>Job Link</th>\n    <th>Resume Link</th>\n  </tr>\n  {{ $('Create a document').all().map((item, i) => `\n  <tr>\n    <td>${i+1}</td>\n    <td>${item.json.name.split(' - ')[1] || 'N/A'}</td>\n    <td>${item.json.name.split(' - ')[2] || 'N/A'}</td>\n    <td><a href=\"#\">Apply</a></td>\n    <td><a href=\"https://docs.google.com/document/d/${item.json.id}/edit\">Resume</a></td>\n  </tr>`).join('') }}\n</table>\n\n<p>Good luck today! 🚀</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        240,
+        928
+      ],
+      "id": "479475f2-a03d-4c12-8ef4-a176e4ec42cf",
+      "name": "Send a message",
+      "webhookId": "9850dd48-3a61-487a-ac8f-b957698073d6",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "cylmZT3QqWFwXmec",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Variables": {
+      "main": [
+        [
+          {
+            "node": "Google Drive ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive ": {
+      "main": [
+        [
+          {
+            "node": "Extract Text from pdf",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Text from pdf": {
+      "main": [
+        [
+          {
+            "node": "Build LinkedURL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build LinkedURL": {
+      "main": [
+        [
+          {
+            "node": "Apify - Fetch Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chek Apify status": {
+      "main": [
+        [
+          {
+            "node": "If Scraping Done?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Scraping Done?": {
+      "main": [
+        [
+          {
+            "node": "Fetch Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify - Fetch Jobs": {
+      "main": [
+        [
+          {
+            "node": "Chek Apify status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Chek Apify status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Results": {
+      "main": [
+        [
+          {
+            "node": "Parse Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Results": {
+      "main": [
+        [
+          {
+            "node": "Limit to 10 Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit to 10 Jobs": {
+      "main": [
+        [
+          {
+            "node": "ATS Optimiser Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "ATS Optimiser Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ATS Optimiser Agent": {
+      "main": [
+        [
+          {
+            "node": "Create a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a document": {
+      "main": [
+        [
+          {
+            "node": "Update a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a document": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "cd416579-095d-4d50-a16e-01cccdf215c9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "18dc71282c568cd0d92d899a158e4c4af50c8f32a2db2fdfb4ee52ef42587b7c"
+  },
+  "id": "ejZwfwtl1wXmmeYc",
+  "tags": []
+}
